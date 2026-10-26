@@ -1,0 +1,45 @@
+name: Firmware and protocol tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+      - name: Prepare Pico SDK 2.2.0
+        run: |
+          git clone --branch 2.2.0 --depth 1 https://github.com/raspberrypi/pico-sdk.git .deps/pico-sdk
+          git -C .deps/pico-sdk submodule update --init --depth 1 lib/tinyusb lib/btstack lib/cyw43-driver
+      - name: Build guitar and receiver
+        run: |
+          cmake -S . -B build -G Ninja -DPICO_SDK_PATH="$GITHUB_WORKSPACE/.deps/pico-sdk" -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 4
+      - name: Python and compiled firmware tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: WebHID protocol tests
+        run: node --test tests/*.test.mjs
+      - name: Native authentication tests
+        run: |
+          cmake -S tests/xsm3_native -B build-native -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-native
+          ctest --test-dir build-native --output-on-failure

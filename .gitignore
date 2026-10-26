@@ -1,0 +1,39 @@
+# Firmware and CMake build output
+/build*/
+/out/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/compile_commands.json
+/Makefile
+*.uf2
+*.elf
+*.bin
+*.hex
+*.map
+*.o
+*.obj
+
+# Local SDK dependencies, experiments and editor settings
+/.deps/
+/.vscode/
+/.idea/
+*.log
+*.tmp
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+/.venv/
+/venv/
+/.pytest_cache/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Operating system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

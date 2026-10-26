@@ -1,0 +1,3 @@
+[submodule "third_party/libxsm3"]
+	path = third_party/libxsm3
+	url = https://github.com/InvoxiPlayGames/libxsm3.git

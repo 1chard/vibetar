@@ -1,0 +1,24 @@
+{
+  "buttons": {
+    "green": 2,
+    "red": 3,
+    "yellow": 4,
+    "blue": 5,
+    "orange": 6,
+    "strum_up": 7,
+    "strum_down": 8,
+    "start": 9,
+    "back": 10,
+    "tilt": 11,
+    "guide": 12
+  },
+  "mode_gpio": 13,
+  "whammy": {
+    "gpio": 26,
+    "enabled": false,
+    "inverted": false,
+    "min": 0,
+    "max": 4095,
+    "deadzone": 32
+  }
+}

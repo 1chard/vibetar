@@ -1,0 +1,4 @@
+#pragma once
+#define DCD_EVENT_BUS_RESET 1
+#define DCD_EVENT_UNPLUGGED 2
+#define DCD_EVENT_SETUP_RECEIVED 6
