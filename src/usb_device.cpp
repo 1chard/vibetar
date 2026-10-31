@@ -1,3 +1,4 @@
+#include "firmware_info.hpp"
 #include "usb_device.hpp"
 #include "xsm3_auth.hpp"
 #include "feature_protocol.hpp"
@@ -21,6 +22,7 @@ guitar::UsbMode active_mode = guitar::UsbMode::Hid;
 guitar::HostDetector host_detector;
 bool force_hid=false, self_transition=false;
 guitar::HidReport latest_hid{};
+guitar::KeyboardState keyboard_state{};
 guitar::State latest_state{};
 guitar::FirmwareControl firmware_control;
 guitar::GpioPayload latest_gpio{};
@@ -30,7 +32,7 @@ std::array<uint8_t,20> latest_tilt{};
 namespace guitar {
 UsbMode usb_mode() { return active_mode; }
 uint8_t usb_mode_mask() {
-    return (xinput_only(settings::current().host,host_detector.kind(),force_hid)?6:7) | (1<<static_cast<uint8_t>(active_mode));
+    return (xinput_only(settings::current().host,host_detector.kind(),force_hid)?6:15) | (1<<static_cast<uint8_t>(active_mode));
 }
 void usb_observe_host_request(uint8_t type,uint8_t request,uint16_t value,uint16_t index,uint16_t length) {
     host_detector.request(type,request,value,index,length);
@@ -48,10 +50,16 @@ bool usb_restart_due(uint32_t now) { return firmware_control.due(now) && firmwar
 bool UsbDevice::init() {
     return tud_init(0);
 }
+void UsbDevice::request_force_hid(uint32_t now) {
+    force_hid=true;
+    if(detached_){pending_mode_=UsbMode::Hid;return;}
+    request_mode(UsbMode::Hid,now);
+}
 void UsbDevice::request_toggle(uint32_t now) {
     request_mode(policy_next_mode(active_mode,xinput_only(settings::current().host,host_detector.kind(),force_hid)),now);
 }
 void UsbDevice::request_mode(UsbMode mode,uint32_t now) {
+    keyboard_state={};
     if (detached_) return; // One transition at a time; holding button never repeats.
     if(mode==active_mode) return;
     // Deinit stops endpoints and IRQ before any descriptor is changed.
@@ -95,6 +103,8 @@ void UsbDevice::task(uint32_t now, const State& state, const GpioPayload& gpio, 
     bool sent = false;
     if (active_mode == UsbMode::Hid) {
         if (tud_hid_ready()) sent = tud_hid_report(gamepad_report_id, &latest_hid, sizeof(latest_hid));
+    } else if(active_mode==UsbMode::Keyboard){
+        if(tud_hid_ready()){const auto report=keyboard_state.report(state,settings::current().keyboard);sent=tud_hid_report(1,report.data(),report.size());}
     } else if (xinput_ready()) {
         sent = xinput_send(make_xinput_report(state, active_mode));
     }
@@ -120,6 +130,15 @@ uint16_t read_feature_report(uint8_t report_id,uint8_t* buffer,uint16_t requeste
 #endif
     if(radio::available() && report_id==32){
         const auto report=bluetooth::link_report();const auto size=std::min<uint16_t>(requested,report.size());
+        std::memcpy(buffer,report.data(),size);return size;
+    }
+    if(report_id==35 || report_id==36){
+        const auto report=report_id==35?settings::keyboard_report():encode_keyboard(KeyboardConfig{});
+        const auto size=std::min<uint16_t>(requested,report.size());std::memcpy(buffer,report.data(),size);return size;
+    }
+    if(report_id==34){
+        const auto report=firmware_identity(VIBETAR_RECEIVER,radio::available());
+        const auto size=std::min<uint16_t>(requested,report.size());
         std::memcpy(buffer,report.data(),size);return size;
     }
     if(report_id==33){
@@ -221,6 +240,7 @@ void submit_feature_report(uint8_t report_id,const uint8_t* buffer,uint16_t leng
 #if VIBETAR_RECEIVER
     if(radio::available() && report_id==30){bluetooth::submit_connect(buffer,length);return;}
 #endif
+    if(report_id==35 && !firmware_control.pending()){settings::submit_keyboard(buffer,length);return;}
     if (report_id == guitar::firmware_report_id) {
         const bool busy = guitar::settings::report()[1] == static_cast<uint8_t>(guitar::ConfigStatus::Pending);
         firmware_control.submit(buffer, length, to_ms_since_boot(get_absolute_time()), busy);
@@ -247,6 +267,7 @@ extern "C" uint16_t tud_hid_get_report_cb(uint8_t instance,uint8_t report_id,hid
     if(instance!=0)return 0;
     if(type==HID_REPORT_TYPE_FEATURE)return guitar::read_feature_report(report_id,buffer,requested);
     if(report_id!=guitar::gamepad_report_id || type!=HID_REPORT_TYPE_INPUT)return 0;
+    if(guitar::usb_mode()==guitar::UsbMode::Keyboard){const auto report=keyboard_state.report(latest_state,guitar::settings::current().keyboard);const auto size=std::min<uint16_t>(requested,report.size());std::memcpy(buffer,report.data(),size);return size;}
     const auto size=std::min<uint16_t>(requested,sizeof(latest_hid));
     std::memcpy(buffer,&latest_hid,size);return size;
 }

@@ -4,11 +4,11 @@
 namespace guitar::bluetooth {
 constexpr uint8_t feature_size(uint8_t id){
     constexpr uint8_t sizes[]{0,0,24,24,16,20,30,24,24,16,16,20,8,8,16,16,16,16,16,16,20,8,8,24,8,8};
-    if(id==33)return 24;
+    if(id>=33 && id<=36)return 24;
     return id<sizeof(sizes)?sizes[id]:0;
 }
 constexpr bool writable_feature(uint8_t id){
-    return id==2 || id==4 || id==7 || id==9 || id==12 || id==15 || id==18 || id==21 || id==24;
+    return id==35 || id==2 || id==4 || id==7 || id==9 || id==12 || id==15 || id==18 || id==21 || id==24;
 }
 // ATT prepare writes can split a feature report at arbitrary offsets.
 // One connection / one prepared report; never publish an incomplete payload.

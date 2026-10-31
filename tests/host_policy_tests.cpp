@@ -20,6 +20,7 @@ constexpr bool detector_test() {
 }
 constexpr bool persistence_test() {
     RuntimeConfig c{},r{};c.host={ModePolicy::XInputOnly,true};c.tilt.source=TiltSource::Adxl345;
+    c.host.chord_toggle=true;
     auto record=settings::make_record(c,7);
     if(!settings::parse_record(record,r) || !same_config(c,r)) return false;
     record[74]^=1;if(settings::parse_record(record,r)) return false;
@@ -27,7 +28,7 @@ constexpr bool persistence_test() {
     c.host={};c.extras.digital_pins[0]=0;record=settings::make_record(c,8);
     settings::write_u32(record,0,0x33434658);settings::write_u32(record,72,settings::crc32(record,72));
     if(!settings::parse_record(record,r) || !same_config(c,r)) return false;
-    auto p=encode_host(c.host);p[4]=1;if(decode_host(p,r.host)) return false;
+    auto p=encode_host(c.host);p[5]=1;if(decode_host(p,r.host)) return false;
     p=encode_host(c.host);p[2]=3;return !decode_host(p,r.host);
 }
 static_assert(detector_test(),"Positive host fingerprints, reset and no restriction of unknown hosts");
@@ -42,5 +43,5 @@ static_assert(!xinput_only({ModePolicy::Pc},HostKind::Xbox360,false));
 static_assert(!xinput_only({ModePolicy::XInputOnly},HostKind::Xbox360,true));
 static_assert(policy_next_mode(UsbMode::XInput,true)==UsbMode::RockBand);
 static_assert(policy_next_mode(UsbMode::RockBand,true)==UsbMode::XInput);
-static_assert(policy_next_mode(UsbMode::RockBand,false)==UsbMode::Hid);
+static_assert(policy_next_mode(UsbMode::RockBand,false)==UsbMode::Keyboard);
 }

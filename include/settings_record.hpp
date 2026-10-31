@@ -21,7 +21,7 @@ constexpr uint32_t crc32(const FlashRecord& r, size_t length = 32) {
 constexpr FlashRecord make_record(const RuntimeConfig& c, uint32_t sequence) {
     FlashRecord r{};
     for (auto& byte : r) byte = 0xff;
-    write_u32(r, 0, 0x37434658); // XFC7; all earlier versions still load
+    write_u32(r, 0, 0x38434658); // XFC8; all earlier versions still load
     write_u32(r, 4, sequence);
     const auto payload = encode_config(c);
     for (size_t i = 0; i < payload.size(); ++i) r[8 + i] = payload[i];
@@ -37,17 +37,20 @@ constexpr FlashRecord make_record(const RuntimeConfig& c, uint32_t sequence) {
     for(size_t i=0;i<battery.size();++i)r[96+i]=battery[i];
     const auto bluetooth=encode_bluetooth(c.bluetooth);
     for(size_t i=0;i<bluetooth.size();++i)r[112+i]=bluetooth[i];
-    write_u32(r,120,crc32(r,120));
+    const auto keyboard=encode_keyboard(c.keyboard);
+    for(size_t i=0;i<24;++i)r[120+i]=keyboard[i];
+    write_u32(r,144,crc32(r,144));
     return r;
 }
 constexpr bool parse_record(const FlashRecord& r, RuntimeConfig& c) {
     const bool legacy = read_u32(r, 0) == 0x31434658;
-    const bool with_bluetooth=read_u32(r,0)==0x37434658;
+    const bool with_keyboard=read_u32(r,0)==0x38434658;
+    const bool with_bluetooth=read_u32(r,0)==0x37434658 || with_keyboard;
     const bool with_battery = read_u32(r,0)==0x36434658 || with_bluetooth;
     const bool with_outputs = read_u32(r,0)==0x35434658 || with_battery;
     const bool with_host = read_u32(r,0)==0x34434658 || with_outputs;
     const bool extended = read_u32(r, 0) == 0x33434658 || with_host;
-    const size_t checksum = legacy ? 32 : with_bluetooth ? 120 : with_battery ? 112 : with_outputs ? 96 : with_host ? 80 : extended ? 72 : 56;
+    const size_t checksum = legacy ? 32 : with_keyboard ? 144 : with_bluetooth ? 120 : with_battery ? 112 : with_outputs ? 96 : with_host ? 80 : extended ? 72 : 56;
     if ((!legacy && !extended && read_u32(r, 0) != 0x32434658) ||
         read_u32(r, checksum) != crc32(r, checksum)) return false;
     ConfigPayload payload{};
@@ -81,6 +84,10 @@ constexpr bool parse_record(const FlashRecord& r, RuntimeConfig& c) {
     if(with_bluetooth){
         BluetoothPayload p{};for(size_t i=0;i<p.size();++i)p[i]=r[112+i];
         if(!decode_bluetooth(p,candidate.bluetooth))return false;
+    }
+    if(with_keyboard){
+        KeyboardPayload p{};for(size_t i=0;i<24;++i)p[i]=r[120+i];
+        if(!decode_keyboard(p,candidate.keyboard))return false;
     }
     c = candidate;
     return true;

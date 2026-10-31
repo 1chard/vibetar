@@ -31,8 +31,8 @@ uint16_t interval=0;
 uint8_t pending_command=0,command_status=0,last_command=0;
 HidReport latest{};
 btstack_packet_callback_registration_t hci_registration{},sm_registration{};
-hids_device_report_t report_storage[28]{};
-std::array<std::array<uint8_t,30>,34> feature_cache{};
+hids_device_report_t report_storage[31]{};
+std::array<std::array<uint8_t,30>,37> feature_cache{};
 FeatureTransfer prepared{}, queued{};
 std::array<uint8_t,30> read_snapshot{};
 uint8_t read_id=0;
@@ -82,6 +82,9 @@ constexpr uint8_t report_map[]{
     0x85,24,0x09,24,0x95,8,0xb1,0x02,
     0x85,25,0x09,25,0x95,8,0xb1,0x02,
     0x85,33,0x09,33,0x95,24,0xb1,0x02,
+    0x85,34,0x09,34,0x95,24,0xb1,0x02,
+    0x85,35,0x09,35,0x95,24,0xb1,0x02,
+    0x85,36,0x09,36,0x95,24,0xb1,0x02,
     0xc0
 };
 constexpr uint8_t advertisement[]{2,1,6,3,3,0x12,0x18,3,0x19,0xc4,0x03,8,0xff,0xff,0xff,'X','C','G','T',1};
@@ -207,7 +210,7 @@ bool start(){
     device_information_service_server_set_manufacturer_name("Vibetar DIY");
     device_information_service_server_set_model_number("Pico W Guitar");
     device_information_service_server_set_pnp_id(2,0xcafe,0x4005,0x020d);
-    hids_device_init_with_storage(0,report_map,sizeof(report_map),28,report_storage);
+    hids_device_init_with_storage(0,report_map,sizeof(report_map),31,report_storage);
     hids_device_register_packet_handler(packet_handler);
     hids_device_register_get_report_callback(get_report);
     hci_registration.callback=packet_handler;hci_add_event_handler(&hci_registration);
@@ -243,6 +246,8 @@ void task(uint32_t,const State& state,bool usb_mounted){
         static decltype(feature_cache) snapshot{};
         for(uint8_t id=2;id<=24;++id)read_feature_report(id,snapshot[id].data(),feature_size(id));
         read_feature_report(33,snapshot[33].data(),24);
+        read_feature_report(34,snapshot[34].data(),24);
+        read_feature_report(35,snapshot[35].data(),24);read_feature_report(36,snapshot[36].data(),24);
         snapshot[25]={'X','C','T','R',1,1,0,0}; // v1: transport 1 = BLE HID
         cyw43_thread_enter();feature_cache=snapshot;
         if(queued.id && queued.id!=4)feature_cache[queued.id][1]=1;

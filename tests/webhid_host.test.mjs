@@ -4,7 +4,7 @@ import {HOST_DEFAULTS,encodeHost,decodeHost,saveHost,decodeHostLive} from '../to
 test('policy payload roundtrip, report ID and offset',()=>{
   const c={policy:2,boot_rock_band:true};const p=encodeHost(c);assert.deepEqual([...p],[1,0,2,1,0,0,0,0]);
   const b=new Uint8Array(12);b[2]=12;b.set(p,3);assert.deepEqual(decodeHost(new DataView(b.buffer,2,9)).host,c);
-  assert.throws(()=>encodeHost({policy:3,boot_rock_band:false}));p[4]=1;assert.throws(()=>decodeHost(p));
+  assert.throws(()=>encodeHost({policy:3,boot_rock_band:false}));p[5]=1;assert.throws(()=>decodeHost(p));
 });
 test('live host distinction, limited cycle and recovery override',()=>{
   const b=Uint8Array.from([88,67,72,83,1,2,1,2,0,0,4,0,0,0,0,0]);
@@ -21,3 +21,5 @@ test('policy save requires matching Ready, rejects flash error and stale config'
   await assert.rejects(saveHost(client(3),c),/flash/);await assert.rejects(saveHost(client(2),c),/rejeitada/);
   await assert.rejects(saveHost(client(0,true),c),/não confirmada/);
 });
+
+test('optional chord toggle persists and rejects invalid flag',()=>{const c={policy:0,boot_rock_band:false,chord_toggle:true};const p=encodeHost(c);assert.equal(p[4],1);assert.deepEqual(decodeHost(p).host,c);p[4]=2;assert.throws(()=>decodeHost(p));});

@@ -65,6 +65,9 @@ constexpr uint8_t hid_report_descriptor_base[] = {
     0x85, guitar::battery_defaults_report_id, 0x09, 0x13, 0xb1, 0x02,
     0x85, guitar::battery_live_report_id, 0x09, 0x14, 0x95, 20, 0xb1, 0x02,
     0x85, 33, 0x09, 33, 0x95, 24, 0xb1, 0x02,
+    0x85,34,0x09,34,0x95,24,0xb1,0x02,
+    0x85,35,0x09,35,0x95,24,0xb1,0x02,
+    0x85,36,0x09,36,0x95,24,0xb1,0x02,
     0x85, 28, 0x09, 28, 0x95, 8, 0xb1, 0x02,
     0xc0
 };
@@ -87,14 +90,36 @@ constexpr auto make_wireless_descriptor(){
     d.back()=0xc0;return d;
 }
 constexpr auto hid_report_descriptor_wireless=make_wireless_descriptor();
-constexpr auto make_hid_configuration(uint16_t length){
+constexpr uint8_t gamepad_prefix[]={TUD_HID_REPORT_DESC_GAMEPAD(HID_REPORT_ID(1))};
+constexpr uint8_t keyboard_prefix[]={
+ 0x05,1,0x09,6,0xa1,1,0x85,1,
+ 0x05,7,0x19,0xe0,0x29,0xe7,0x15,0,0x25,1,0x75,1,0x95,8,0x81,2,
+ 0x75,8,0x95,1,0x81,3,
+ 0x19,0,0x29,0xef,0x15,0,0x25,1,0x75,1,0x95,0xf0,0x81,2,0xc0
+};
+template<size_t N> constexpr auto keyboard_descriptor(const uint8_t (&source)[N]){
+ std::array<uint8_t,N-sizeof(gamepad_prefix)+sizeof(keyboard_prefix)> out{};
+ for(size_t i=0;i<sizeof(keyboard_prefix);++i)out[i]=keyboard_prefix[i];
+ for(size_t i=sizeof(gamepad_prefix);i<N;++i)out[i-sizeof(gamepad_prefix)+sizeof(keyboard_prefix)]=source[i];
+ return out;
+}
+constexpr auto keyboard_base=keyboard_descriptor(hid_report_descriptor_base);
+constexpr auto keyboard_wireless=[](){
+ std::array<uint8_t,keyboard_base.size()+sizeof(bluetooth_features)> out{};
+ for(size_t i=0;i<keyboard_base.size()-1;++i)out[i]=keyboard_base[i];
+ for(size_t i=0;i<sizeof(bluetooth_features);++i)out[keyboard_base.size()-1+i]=bluetooth_features[i];
+ out.back()=0xc0;return out;
+}();
+constexpr auto make_hid_configuration(uint16_t length,uint16_t packet=32){
     return std::array<uint8_t,TUD_CONFIG_DESC_LEN+TUD_HID_DESC_LEN>{
     TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN, 0, 100),
-    TUD_HID_DESCRIPTOR(0, 0, HID_ITF_PROTOCOL_NONE, length, 0x81, 32, 4)
+    TUD_HID_DESCRIPTOR(0, 0, HID_ITF_PROTOCOL_NONE, length, 0x81, packet, 4)
     };
 }
 constexpr auto hid_configuration_base=make_hid_configuration(sizeof(hid_report_descriptor_base));
 constexpr auto hid_configuration_wireless=make_hid_configuration(hid_report_descriptor_wireless.size());
+constexpr auto keyboard_configuration_base=make_hid_configuration(keyboard_base.size(),64);
+constexpr auto keyboard_configuration_wireless=make_hid_configuration(keyboard_wireless.size(),64);
 // Both wired XUSB interfaces use the same endpoints, with different subtypes.
 constexpr std::array<uint8_t, 63> make_xinput_configuration(uint8_t subtype) {
     return {
@@ -120,17 +145,20 @@ static_assert(sizeof(hid_configuration_base) == TUD_CONFIG_DESC_LEN + TUD_HID_DE
 
 extern "C" const uint8_t* tud_descriptor_device_cb() {
     const auto mode = guitar::usb_mode();
-    const auto& descriptor = mode == guitar::UsbMode::Hid ? hid_device :
+    const auto& descriptor = !guitar::is_xinput_mode(mode) ? hid_device :
                              (mode == guitar::UsbMode::RockBand ? rock_band_device : xinput_device);
     return reinterpret_cast<const uint8_t*>(&descriptor);
 }
 extern "C" const uint8_t* tud_descriptor_configuration_cb(uint8_t index) {
     if (index != 0) return nullptr;
+    if(guitar::usb_mode()==guitar::UsbMode::Keyboard)return guitar::radio::available()?keyboard_configuration_wireless.data():keyboard_configuration_base.data();
     if (guitar::usb_mode() == guitar::UsbMode::Hid) return guitar::radio::available()?hid_configuration_wireless.data():hid_configuration_base.data();
     return guitar::usb_mode() == guitar::UsbMode::RockBand ? rock_band_configuration.data() : xinput_configuration.data();
 }
 extern "C" const uint8_t* tud_hid_descriptor_report_cb(uint8_t instance) {
-    if(instance!=0 || guitar::usb_mode()!=guitar::UsbMode::Hid)return nullptr;
+    if(instance!=0)return nullptr;
+    if(guitar::usb_mode()==guitar::UsbMode::Keyboard)return guitar::radio::available()?keyboard_wireless.data():keyboard_base.data();
+    if(guitar::usb_mode()!=guitar::UsbMode::Hid)return nullptr;
     return guitar::radio::available()?hid_report_descriptor_wireless.data():hid_report_descriptor_base;
 }
 extern "C" const uint16_t* tud_descriptor_string_cb(uint8_t index, uint16_t) {
@@ -140,7 +168,7 @@ extern "C" const uint16_t* tud_descriptor_string_cb(uint8_t index, uint16_t) {
         descriptor[1] = 0x0409;
         return descriptor;
     }
-    const bool hid = guitar::usb_mode() == guitar::UsbMode::Hid;
+    const bool hid = !guitar::is_xinput_mode(guitar::usb_mode());
     const bool rock_band = guitar::usb_mode() == guitar::UsbMode::RockBand;
     if (index == 0xee && !hid) {
         guitar::usb_observe_os_string();
@@ -153,6 +181,7 @@ extern "C" const uint16_t* tud_descriptor_string_cb(uint8_t index, uint16_t) {
     switch (index) {
     case 1: value = "Vibetar DIY"; break;
     case 2:
+        if(guitar::usb_mode()==guitar::UsbMode::Keyboard){value="Vibetar Festival Keyboard";break;}
 #if VIBETAR_RECEIVER
         value = hid ? "Vibetar Receiver HID" : (rock_band ? "Vibetar Receiver Rock Band" : "Vibetar Receiver Guitar Hero");
 #else
@@ -163,7 +192,7 @@ extern "C" const uint16_t* tud_descriptor_string_cb(uint8_t index, uint16_t) {
         pico_get_unique_board_id_string(serial, sizeof(serial));
         const size_t length = std::strlen(serial);
         serial[length] = '-';
-        serial[length + 1] = hid ? 'H' : (rock_band ? 'R' : 'X');
+        serial[length + 1] = guitar::usb_mode()==guitar::UsbMode::Keyboard ? 'K' : hid ? 'H' : (rock_band ? 'R' : 'X');
         serial[length + 2] = '\0';
         value = serial;
         break;

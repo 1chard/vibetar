@@ -141,7 +141,9 @@ on the guitar; settings edited on the receiver apply to the receiver itself.
 ### Recovery and updates
 
 - **Force HID:** hold Start + Back while powering on, without MODE. This restores editor access for that session.
-- **Enter BOOTSEL:** hold Start + Back + MODE for 3 seconds, or use the editor's BOOTSEL command. Then copy a UF2 to RPI-RP2.
+- **Force HID at runtime:** hold Start + Back/Select for 3 seconds. This overrides XInput-only restrictions for the current session, including on the Bluetooth receiver.
+- **Optional mode shortcut:** enable Start + Select mode switching in the editor on the guitar. Release a short chord to cycle modes; a long hold only forces HID. The setting is saved in flash.
+- **Enter BOOTSEL:** use the editor command or the physical BOOTSEL button. Controller-button BOOTSEL gestures have been removed.
 - **Restore settings:** use the editor's factory-reset action. BOOTSEL itself does not erase settings.
 
 Button gestures use the saved pin mapping. The physical BOOTSEL button remains

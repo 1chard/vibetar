@@ -4,7 +4,7 @@ export function validateOutputs(c,base,extras,tilt){
   if(!c || Object.keys(c).join()!=='rules' || !Array.isArray(c.rules) || c.rules.length!==3) return ['Informe as três saídas de LED.'];
   const errors=[],used=new Set([...(base?Object.values(base.buttons):[]),base?.mode_gpio,...(extras?Object.values(extras.pins):[]),...(tilt?.source===2?[tilt.sda,tilt.scl]:[])]);
   for(const [i,r] of c.rules.entries()){
-    if(!r || !['active_low,gpio,modes','active_low,event,gpio,modes'].includes(Object.keys(r).sort().join()) || !Number.isInteger(r.gpio) || (r.gpio!==255 && r.gpio!==254 && (r.gpio<0 || r.gpio>22)) || !Number.isInteger(r.modes) || r.modes<0 || r.modes>7 || (r.event!==undefined && (!Number.isInteger(r.event) || r.event<0 || r.event>255 || (r.event>4 && (!(r.event&128)||(r.event&64))))) || typeof r.active_low!=='boolean') {errors.push(`LED ${i+1}: revise GPIO, evento e polaridade.`);continue;}
+    if(!r || !['active_low,gpio,modes','active_low,event,gpio,modes'].includes(Object.keys(r).sort().join()) || !Number.isInteger(r.gpio) || (r.gpio!==255 && r.gpio!==254 && (r.gpio<0 || r.gpio>22)) || !Number.isInteger(r.modes) || r.modes<0 || r.modes>15 || (r.event!==undefined && (!Number.isInteger(r.event) || r.event<0 || r.event>255 || (r.event>4 && (!(r.event&128)||(r.event&64))))) || typeof r.active_low!=='boolean') {errors.push(`LED ${i+1}: revise GPIO, evento e polaridade.`);continue;}
     if(r.gpio===254 && r.active_low)errors.push(`LED ${i+1}: LED embutido usa polaridade fixa.`);
     if(r.gpio===255)continue;
     if(used.has(r.gpio))errors.push(`${r.gpio===254?'LED embutido':'GP'+r.gpio}: saída de LED em conflito com outra função.`);
@@ -41,7 +41,7 @@ export async function saveOutputs(client,c,base,extras,tilt){
 }
 export function decodeOutputsLive(data){
   const p=bytes(data,17);
-  if(p.length!==16 || String.fromCharCode(...p.subarray(0,4))!=='XCLS' || (p[4]!==1 && p[4]!==2) || p[5]!==3 || ((p[6]|p[7]|p[8])&~7) || (p[7]&~p[6]) || (p[8]&~p[6]) || p[9]>2 || (p[4]===1 && p.subarray(13).some(x=>x)) || [0,1,2].some(i=>p[10+i]!==255 && p[10+i]!==254 && p[10+i]>22))throw new Error('Estado de LEDs incompatível.');
+  if(p.length!==16 || String.fromCharCode(...p.subarray(0,4))!=='XCLS' || (p[4]!==1 && p[4]!==2) || p[5]!==3 || ((p[6]|p[7]|p[8])&~7) || (p[7]&~p[6]) || (p[8]&~p[6]) || p[9]>3 || (p[4]===1 && p.subarray(13).some(x=>x)) || [0,1,2].some(i=>p[10+i]!==255 && p[10+i]!==254 && p[10+i]>22))throw new Error('Estado de LEDs incompatível.');
   if([0,1,2].some(i=>Boolean(p[6]&(1<<i))!==(p[10+i]!==255)))throw new Error('Estado de LEDs inválido.');
   return {mode:p[9],rules:[0,1,2].map(i=>({gpio:p[10+i],enabled:Boolean(p[6]&(1<<i)),active:Boolean(p[7]&(1<<i)),high:Boolean(p[8]&(1<<i)),...(p[4]===2?{brightness:p[13+i]}:{})}))};
 }

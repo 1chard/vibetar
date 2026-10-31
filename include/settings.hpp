@@ -2,6 +2,8 @@
 #include "runtime_config.hpp"
 
 namespace guitar::settings {
+KeyboardPayload keyboard_report();
+void submit_keyboard(const uint8_t*,uint16_t);
 void load();
 const RuntimeConfig& current();
 // Feature callbacks only queue a write. Flash operations run from the main loop.

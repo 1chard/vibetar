@@ -18,7 +18,7 @@ public:
     GpioPayload gpio_report() const { return encode_gpio_report(config_, digital_state(), mode_.pressed(), raw_adc_); }
     GpioScanPayload gpio_scan() const { return encode_gpio_scan(config_, digital_state(), mode_.pressed(), raw_levels_, adc_samples_); }
     bool take_mode_press();
-    bool take_bootsel_request();
+    bool take_force_hid_request();
     bool recovery_chord() const { return state_.pressed(Button::Start) && state_.pressed(Button::Back) && !mode_.pressed(); }
     std::array<uint8_t,20> tilt_report() const {
         std::array<uint8_t,20> p{'X','C','T','L',1,static_cast<uint8_t>(config_.tilt.source),
@@ -44,8 +44,8 @@ private:
     bool tilt_valid_ = false, tilt_pressed_ = false;
     State state_{};
     bool mode_press_ = false;
-    bool bootsel_request_ = false;
-    BootGesture boot_gesture_{config::bootsel_hold_ms};
+    bool force_hid_request_ = false;
+    BootGesture boot_gesture_{config::hid_hold_ms};
     RuntimeConfig config_{};
     uint16_t raw_adc_ = 0;
     uint32_t raw_levels_ = digital_scan_mask;

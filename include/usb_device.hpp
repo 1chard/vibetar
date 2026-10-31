@@ -16,6 +16,7 @@ public:
     bool init();
     void configure_boot(bool recovery,uint32_t now);
     void request_toggle(uint32_t now);
+    void request_force_hid(uint32_t now);
     bool transitioning() const { return detached_; }
     void task(uint32_t now, const State& state, const GpioPayload& gpio, const GpioScanPayload& scan, const std::array<uint8_t,20>& tilt);
 private:

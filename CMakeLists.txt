@@ -67,6 +67,15 @@ target_link_libraries(guitar_xsm3 PRIVATE pico_rand)
 # Include-based port fixes reset/random/error reporting without modifying the submodule.
 set_property(SOURCE src/xsm3_port.c APPEND PROPERTY OBJECT_DEPENDS "${XSM3_DIR}/xsm3.c")
 
+execute_process(COMMAND git rev-parse --short=12 HEAD WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" OUTPUT_VARIABLE firmware_commit OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(NOT firmware_commit)
+ set(firmware_commit "unknown")
+endif()
+execute_process(COMMAND git status --porcelain --untracked-files=normal --ignore-submodules WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" OUTPUT_VARIABLE firmware_changes)
+set(firmware_dirty 0)
+if(firmware_changes)
+ set(firmware_dirty 1)
+endif()
 set(controller_sources
     src/main.cpp
     src/input.cpp
@@ -79,6 +88,7 @@ set(controller_sources
     src/xinput_driver.cpp
     src/xsm3_auth.cpp
     src/settings.cpp
+    tests/keyboard_tests.cpp
     tests/logic_tests.cpp
     tests/settings_tests.cpp
     tests/xinput_profile_tests.cpp
@@ -107,7 +117,7 @@ foreach(target IN ITEMS vibetar vibetar-receiver)
     add_executable(${target} ${controller_sources} ${bt_sources})
     target_include_directories(${target} PRIVATE include)
     target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Werror>)
-    target_compile_definitions(${target} PRIVATE VIBETAR_RECEIVER=${role}
+    target_compile_definitions(${target} PRIVATE VIBETAR_RECEIVER=${role} XCONTROLLER_GIT_COMMIT="${firmware_commit}" XCONTROLLER_GIT_DIRTY=${firmware_dirty}
         PICO_FLASH_BANK_STORAGE_OFFSET=0x1FC000 PICO_FLASH_BANK_TOTAL_SIZE=8192
         PICO_FLASH_ASSUME_CORE1_SAFE=1 PICO_STACK_SIZE=4096)
     target_link_libraries(${target} PRIVATE guitar_xsm3 pico_stdlib pico_bootrom pico_unique_id

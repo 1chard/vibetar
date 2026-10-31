@@ -59,7 +59,7 @@ class BluetoothBuildTest(unittest.TestCase):
         for rid, length in [(21,8), (22,8), (23,24), (24,8), (32,24)]:
             self.assertEqual(w[(rid,'feature')], length*8)
             self.assertNotIn((rid,'feature'), pico)
-        self.assertEqual({k:v for k,v in w.items() if k[0]<21 or k[0] in (28,33)}, pico)
+        self.assertEqual({k:v for k,v in w.items() if k[0]<21 or k[0] in (28,33,34,35,36)}, pico)
         self.assertTrue(any('hids_device_send_input_report_for_id' in s for s in self.w.symbols))
 
     def test_both_hid_configurations_advertise_correct_runtime_lengths(self):
@@ -68,6 +68,16 @@ class BluetoothBuildTest(unittest.TestCase):
             descriptor=self.w.object('hid_report_descriptor_'+suffix)
             self.assertEqual(len(config),34)
             self.assertEqual(int.from_bytes(config[25:27],'little'),len(descriptor))
+
+    def test_keyboard_descriptor_supports_nkro_and_configuration(self):
+        for name in ['keyboard_base','keyboard_wireless']:
+            bits=report_bits(self.w.object(name))
+            self.assertEqual(bits[(1,'input')],256)
+            self.assertEqual(bits[(35,'feature')],192)
+            self.assertEqual(bits[(36,'feature')],192)
+        for name in ['keyboard_configuration_base','keyboard_configuration_wireless']:
+            config=self.w.object(name)
+            self.assertEqual(int.from_bytes(config[31:33],'little'),64)
 
     def test_ble_map_reuses_usb_features_and_identifies_transport(self):
         bits = report_bits(self.w.object('report_map'))
@@ -88,7 +98,7 @@ class BluetoothBuildTest(unittest.TestCase):
             if uuid==0x2a4d:report_flags=flags
             if uuid==0x2908 and value[1]==3:found[value[0]]=report_flags
             pos+=length
-        self.assertEqual(set(found),set(range(2,26))|{33})
+        self.assertEqual(set(found),set(range(2,26))|{33,34,35,36})
         for rid,flags in found.items():
             # SDK 2.2.0 flags: dynamic, encrypted read/write, 16-byte key.
             self.assertEqual(flags,0xf50b)
@@ -108,7 +118,7 @@ class BluetoothBuildTest(unittest.TestCase):
             pos+=length
         self.assertIn((0x2800,b'\x12\x18'),attributes)
         self.assertIn((0x2908,b'\x01\x01'),attributes)
-        self.assertEqual(sum(uuid==0x2a4d for uuid,_ in attributes),28)
+        self.assertEqual(sum(uuid==0x2a4d for uuid,_ in attributes),31)
         for rid in range(2,26):self.assertIn((0x2908,bytes([rid,3])),attributes)
         self.assertFalse(any(uuid in (0x2a22,0x2a32,0x2a33) for uuid,_ in attributes))
 

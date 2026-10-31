@@ -23,7 +23,7 @@ using OutputsPayload=std::array<uint8_t,16>;
 constexpr bool valid_outputs(const OutputsConfig& c) {
     for(size_t i=0;i<c.rules.size();++i) {
         const auto& r=c.rules[i];
-        if((r.pin!=255 && r.pin!=onboard_led_pin && r.pin>22) || r.modes>7 || (r.event>4 && (!(r.event&128) || (r.event&64)))) return false;
+        if((r.pin!=255 && r.pin!=onboard_led_pin && r.pin>22) || r.modes>15 || (r.event>4 && (!(r.event&128) || (r.event&64)))) return false;
         if(r.pin==onboard_led_pin && r.active_low)return false;
         if(r.pin!=255) for(size_t j=i+1;j<c.rules.size();++j) if(r.pin==c.rules[j].pin) return false;
         // RP2040 GPIOs separated by 16 share a PWM channel.

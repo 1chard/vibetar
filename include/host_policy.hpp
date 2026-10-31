@@ -4,16 +4,16 @@
 namespace guitar {
 enum class ModePolicy : uint8_t { Auto, Pc, XInputOnly };
 enum class HostKind : uint8_t { Unknown, Windows, Xbox360 };
-struct HostConfig { ModePolicy policy = ModePolicy::Auto; bool boot_rock_band = false; };
+struct HostConfig { ModePolicy policy = ModePolicy::Auto; bool boot_rock_band = false; bool chord_toggle = false; };
 using HostPayload = std::array<uint8_t,8>;
 inline constexpr uint8_t host_config_report_id=12, host_defaults_report_id=13, host_live_report_id=14;
 constexpr HostPayload encode_host(const HostConfig& c, uint8_t status=0) {
-    return {1,status,static_cast<uint8_t>(c.policy),static_cast<uint8_t>(c.boot_rock_band)};
+    return {1,status,static_cast<uint8_t>(c.policy),static_cast<uint8_t>(c.boot_rock_band),static_cast<uint8_t>(c.chord_toggle)};
 }
 constexpr bool decode_host(const HostPayload& p, HostConfig& c) {
-    if(p[0]!=1 || p[1] || p[2]>2 || p[3]>1) return false;
-    for(size_t i=4;i<p.size();++i) if(p[i]) return false;
-    c={static_cast<ModePolicy>(p[2]),p[3]!=0};return true;
+    if(p[0]!=1 || p[1] || p[2]>2 || p[3]>1 || p[4]>1) return false;
+    for(size_t i=5;i<p.size();++i) if(p[i]) return false;
+    c={static_cast<ModePolicy>(p[2]),p[3]!=0,p[4]!=0};return true;
 }
 constexpr bool xinput_only(const HostConfig& c, HostKind h, bool recovery) {
     return !recovery && (c.policy==ModePolicy::XInputOnly || (c.policy==ModePolicy::Auto && h==HostKind::Xbox360));

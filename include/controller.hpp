@@ -5,12 +5,13 @@
 #include <cstdint>
 
 namespace guitar {
-enum class UsbMode : uint8_t { Hid, XInput, RockBand }; // XInput retains Guitar Hero identity
+enum class UsbMode : uint8_t { Hid, XInput, RockBand, Keyboard }; // XInput retains Guitar Hero identity
 constexpr UsbMode next_mode(UsbMode mode) {
     switch (mode) {
     case UsbMode::Hid: return UsbMode::XInput;
     case UsbMode::XInput: return UsbMode::RockBand;
-    case UsbMode::RockBand: return UsbMode::Hid;
+    case UsbMode::RockBand: return UsbMode::Keyboard;
+    case UsbMode::Keyboard: return UsbMode::Hid;
     }
     return UsbMode::Hid;
 }

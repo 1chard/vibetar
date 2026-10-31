@@ -1,5 +1,6 @@
 #pragma once
 #include "config.hpp"
+#include "keyboard.hpp"
 #include "tilt_config.hpp"
 #include "host_policy.hpp"
 #include "output_config.hpp"
@@ -30,6 +31,7 @@ struct ExtrasConfig {
 };
 
 struct RuntimeConfig {
+    KeyboardConfig keyboard{};
     BluetoothConfig bluetooth{};
     BatteryConfig battery{};
     OutputsConfig outputs{};
@@ -46,6 +48,7 @@ struct RuntimeConfig {
     uint16_t whammy_deadzone = config::whammy_deadzone;
 };
 constexpr bool valid_config(const RuntimeConfig& c) {
+    if(!valid_keyboard(c.keyboard))return false;
     if(!valid_battery(c.battery))return false;
     if(!valid_outputs(c.outputs)) return false;
     for(const auto& r:c.outputs.rules) if(r.pin!=unused_pin) {
@@ -123,10 +126,11 @@ constexpr bool decode_config(const ConfigPayload& p, RuntimeConfig& c) {
     return true;
 }
 constexpr bool same_config(const RuntimeConfig& a, const RuntimeConfig& b) {
+    if(!same_keyboard(a.keyboard,b.keyboard))return false;
     if(!same_bluetooth(a.bluetooth,b.bluetooth))return false;
     if(!same_battery(a.battery,b.battery))return false;
     if(!same_outputs(a.outputs,b.outputs)) return false;
-    if(a.host.policy!=b.host.policy || a.host.boot_rock_band!=b.host.boot_rock_band) return false;
+    if(a.host.policy!=b.host.policy || a.host.boot_rock_band!=b.host.boot_rock_band || a.host.chord_toggle!=b.host.chord_toggle) return false;
     if (!same_tilt(a.tilt, b.tilt)) return false;
     for (size_t i = 0; i < a.extras.digital_pins.size(); ++i)
         if (a.extras.digital_pins[i] != b.extras.digital_pins[i]) return false;

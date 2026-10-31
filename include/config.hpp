@@ -26,7 +26,7 @@ inline constexpr uint32_t debounce_ms = 3;
 inline constexpr uint32_t sample_interval_ms = 1;
 inline constexpr uint32_t report_interval_ms = 4;
 inline constexpr uint32_t usb_detach_ms = 350;
-inline constexpr uint32_t bootsel_hold_ms = 3000;
+inline constexpr uint32_t hid_hold_ms = 3000;
 // USB startup/cycling policy now lives in persistent HostConfig (host_policy.hpp).
 
 constexpr bool valid_pins() {

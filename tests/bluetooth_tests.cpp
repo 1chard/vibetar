@@ -28,7 +28,7 @@ constexpr bool checks(){
     if(config.bluetooth.enabled!=bool(VIBETAR_RECEIVER) || !config.bluetooth.usb_priority)return false;
     config.bluetooth={true,false};config.battery.enabled=true;
     auto r=settings::make_record(config,13);
-    if(settings::read_u32(r,0)!=0x37434658 || !settings::parse_record(r,decoded) || !same_config(config,decoded))return false;
+    if(settings::read_u32(r,0)!=0x38434658 || !settings::parse_record(r,decoded) || !same_config(config,decoded))return false;
     r[114]^=1;if(settings::parse_record(r,decoded))return false;
     auto p=encode_bluetooth(config.bluetooth);p[4]=1;
     if(decode_bluetooth(p,decoded.bluetooth))return false;

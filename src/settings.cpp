@@ -49,6 +49,15 @@ void load() {
         }
     }
 }
+KeyboardPayload keyboard_report(){return encode_keyboard(active.keyboard,static_cast<uint8_t>(status));}
+void submit_keyboard(const uint8_t* p,uint16_t length){
+ if(write_pending)return;
+ if(length!=24){status=ConfigStatus::Invalid;return;}
+ KeyboardPayload bytes{};std::memcpy(bytes.data(),p,24);auto candidate=active;
+ if(!decode_keyboard(bytes,candidate.keyboard)){status=ConfigStatus::Invalid;return;}
+ if(same_config(candidate,active)){status=ConfigStatus::Ready;return;}
+ pending=candidate;write_pending=true;status=ConfigStatus::Pending;
+}
 const RuntimeConfig& current() { return active; }
 ConfigPayload report() { return encode_config(active, status); }
 ExtrasPayload extras_report() { return encode_extras(active, status); }

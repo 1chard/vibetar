@@ -5,7 +5,7 @@ test('LED rules roundtrip, HID report ID, offset and reserved bytes',()=>{
   const c={rules:[{gpio:0,modes:1,active_low:false},{gpio:1,modes:2,active_low:true},{gpio:14,modes:6,active_low:false}]};
   const b=encodeOutputs(c);assert.deepEqual([...b],[1,0,0,1,0,0,1,2,1,0,14,6,0,0,0,0]);
   const wrapped=new Uint8Array(24);wrapped.set([15,...b],3);assert.deepEqual(decodeOutputs(new DataView(wrapped.buffer,3,17)).outputs,{rules:c.rules.map(r=>({...r,event:0}))});
-  for(const [offset,value] of [[4,2],[5,5],[14,1],[3,8]]){const bad=b.slice();bad[offset]=value;assert.throws(()=>decodeOutputs(bad));}
+  for(const [offset,value] of [[4,2],[5,5],[14,1],[3,16]]){const bad=b.slice();bad[offset]=value;assert.throws(()=>decodeOutputs(bad));}
 });
 test('LED GPIO conflicts include buttons, MODE, I2C, extras and other outputs',()=>{
   const c=structuredClone(OUTPUTS_DEFAULTS);c.rules[0].gpio=0;

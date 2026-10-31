@@ -12,8 +12,8 @@ void Input::init(const RuntimeConfig& settings) {
     adc_samples_ = {};
     tilt_value_ = 0; tilt_valid_ = tilt_pressed_ = false;
     mode_press_ = false;
-    bootsel_request_ = false;
-    boot_gesture_ = BootGesture{config::bootsel_hold_ms};
+    force_hid_request_ = false;
+    boot_gesture_ = BootGesture{config::hid_hold_ms};
     mode_ = DebouncedButton{config::debounce_ms};
     for (auto& button : extras_buttons_) button = DebouncedButton{config::debounce_ms};
     // Free header pins must have defined levels so a switch can be discovered
@@ -60,9 +60,9 @@ void Input::sample(uint32_t now) {
     state_.left = extras_buttons_[0].pressed(); state_.right = extras_buttons_[1].pressed();
     state_.solo_frets = resolve_solo(state_.buttons, extras_buttons_[2].pressed(), dedicated);
     const auto action = boot_gesture_.update(mode_.pressed(), state_.pressed(Button::Start),
-                                             state_.pressed(Button::Back), now);
+                                             state_.pressed(Button::Back), now, config_.host.chord_toggle);
     mode_press_ |= action == ModeAction::ToggleUsb;
-    bootsel_request_ |= action == ModeAction::EnterBootsel;
+    force_hid_request_ |= action == ModeAction::ForceHid;
     // Three exposed ADCs, including unassigned channels. The game's whammy
     // still uses only its configured channel and calibration.
     for (uint8_t channel = 0; channel < adc_samples_.size(); ++channel) {
@@ -98,9 +98,9 @@ bool Input::take_mode_press() {
     mode_press_ = false;
     return result;
 }
-bool Input::take_bootsel_request() {
-    const bool result = bootsel_request_;
-    bootsel_request_ = false;
+bool Input::take_force_hid_request() {
+    const bool result = force_hid_request_;
+    force_hid_request_ = false;
     return result;
 }
 }

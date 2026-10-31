@@ -27,6 +27,7 @@ int main() {
     guitar::outputs::init(guitar::settings::current().outputs,guitar::usb_mode());
     if (!usb.init()) panic("USB init failed");
     guitar::bluetooth::configure(guitar::settings::current().bluetooth,to_ms_since_boot(get_absolute_time()));
+    guitar::BootGesture receiver_chord{guitar::config::hid_hold_ms};
     uint32_t last_sample = to_ms_since_boot(get_absolute_time());
     while (true) {
         if (guitar::settings::process()) {
@@ -41,9 +42,9 @@ int main() {
         if (uint32_t(now - last_sample) >= guitar::config::sample_interval_ms) {
             last_sample = now;
             input.sample(now);
-            // ROM reboot preserves flash and enables both UF2 drive and picoboot.
+            // Runtime HID recovery preserves settings and overrides mode restrictions.
             // Called outside USB callbacks and after synchronous settings writes.
-            if (input.take_bootsel_request()) reset_usb_boot(0, 0);
+            if (input.take_force_hid_request()) usb.request_force_hid(now);
             if (input.take_mode_press()) {
                 usb.request_toggle(now);
                 guitar::bluetooth::mode_press();
@@ -52,6 +53,8 @@ int main() {
 #if VIBETAR_RECEIVER
         if(!usb.transitioning() && guitar::bluetooth::take_mode_press(now))usb.request_toggle(now);
         const auto state=guitar::bluetooth::received_state(now);
+        if(receiver_chord.update(false,state.pressed(guitar::Button::Start),state.pressed(guitar::Button::Back),now)==guitar::ModeAction::ForceHid)
+            usb.request_force_hid(now);
 #else
         const auto state=input.state();
 #endif

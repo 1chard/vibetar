@@ -23,8 +23,8 @@ constexpr bool decode(const uint8_t* p,size_t length,State& s,uint8_t& counter,u
 }
 constexpr Feedback feedback(UsbMode mode,uint8_t mask){return {'X','C','R','F',1,static_cast<uint8_t>(mode),mask,0};}
 constexpr bool decode_feedback(const uint8_t* p,size_t length,UsbMode& mode){
-    if(length!=8 || p[0]!='X' || p[1]!='C' || p[2]!='R' || p[3]!='F' || p[4]!=1 || p[5]>2 ||
-       (p[6]!=6 && p[6]!=7) || !(p[6]&(1<<p[5])) || p[7])return false;
+    if(length!=8 || p[0]!='X' || p[1]!='C' || p[2]!='R' || p[3]!='F' || p[4]!=1 || p[5]>3 ||
+       (p[6]!=6 && p[6]!=7 && p[6]!=15) || !(p[6]&(1<<p[5])) || p[7])return false;
     mode=static_cast<UsbMode>(p[5]);return true;
 }
 constexpr bool advertised(const uint8_t* p,size_t length){
